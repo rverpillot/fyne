@@ -11,6 +11,8 @@ type testWindow struct {
 	focused            bool
 	onClosed           func()
 	onCloseIntercepted func()
+	onFocusGained      func()
+	onFocusLost        func()
 
 	canvas    *testCanvas
 	clipboard fyne.Clipboard
@@ -119,6 +121,14 @@ func (w *testWindow) SetCloseIntercept(callback func()) {
 
 func (w *testWindow) SetOnDropped(dropped func(fyne.Position, []fyne.URI)) {
 
+}
+
+func (w *testWindow) SetOnFocusGained(gained func()) {
+	w.onFocusGained = gained
+}
+
+func (w *testWindow) SetOnFocusLost(lost func()) {
+	w.onFocusLost = lost
 }
 
 func (w *testWindow) SetPadded(padded bool) {
