@@ -114,7 +114,16 @@ func (w *window) SetCloseIntercept(callback func()) {
 	w.onCloseIntercepted = callback
 }
 
+func (w *window) SetOnFocusGained(callback func()) {
+	w.onFocusGained = callback
+}
+
+func (w *window) SetOnFocusLost(callback func()) {
+	w.onFocusLost = callback
+}
+
 func (w *window) calculatedScale() float32 {
+
 	return calculateScale(userScale(), fyne.CurrentDevice().SystemScaleForWindow(w), w.detectScale())
 }
 
@@ -811,8 +820,14 @@ func (w *window) processFocused(focus bool) {
 			fyne.CurrentApp().Lifecycle().(*app.Lifecycle).TriggerEnteredForeground()
 		}
 		curWindow = w
+		if w.onFocusGained != nil {
+			w.QueueEvent(w.onFocusGained)
+		}
 		w.canvas.FocusGained()
 	} else {
+		if w.onFocusLost != nil {
+			w.QueueEvent(w.onFocusLost)
+		}
 		w.canvas.FocusLost()
 		w.mouseLock.Lock()
 		w.mousePos = fyne.Position{}

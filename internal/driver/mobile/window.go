@@ -101,6 +101,14 @@ func (w *window) SetCloseIntercept(callback func()) {
 	w.onCloseIntercepted = callback
 }
 
+func (w *window) SetOnFocusGained(callback func()) {
+	// no-op on mobile
+}
+
+func (w *window) SetOnFocusLost(callback func()) {
+	// no-op on mobile
+}
+
 func (w *window) SetOnDropped(dropped func(fyne.Position, []fyne.URI)) {
 	// not implemented yet
 }

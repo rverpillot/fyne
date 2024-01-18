@@ -77,6 +77,12 @@ type Window interface {
 	// Since 2.4
 	SetOnDropped(func(Position, []URI))
 
+	// SetOnFocusGained sets a function that runs when the window gains focus.
+	SetOnFocusGained(func())
+
+	// SetOnFocusLost sets a function that runs when the window loses focus.
+	SetOnFocusLost(func())
+
 	// Show the window on screen.
 	Show()
 	// Hide the window from the user.
