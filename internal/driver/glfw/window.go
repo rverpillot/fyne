@@ -122,6 +122,10 @@ func (w *window) SetOnFocusLost(callback func()) {
 	w.onFocusLost = callback
 }
 
+func (w *window) SetOnResized(resized func(fyne.Size)) {
+	w.onResized = resized
+}
+
 func (w *window) calculatedScale() float32 {
 
 	return calculateScale(userScale(), fyne.CurrentDevice().SystemScaleForWindow(w), w.detectScale())
@@ -319,6 +323,13 @@ func (w *window) processResized(width, height int) {
 	if !w.fullScreen {
 		w.width = scale.ToScreenCoordinate(w.canvas, canvasSize.Width)
 		w.height = scale.ToScreenCoordinate(w.canvas, canvasSize.Height)
+	}
+
+	if w.onResized != nil {
+		w.QueueEvent(func() {
+			// w.onResized(fyne.NewSize(float32(width), float32(height)))
+			w.onResized(canvasSize)
+		})
 	}
 
 	if !w.visible { // don't redraw if hidden

@@ -13,6 +13,7 @@ type testWindow struct {
 	onCloseIntercepted func()
 	onFocusGained      func()
 	onFocusLost        func()
+	onResized          func(fyne.Size)
 
 	canvas    *testCanvas
 	clipboard fyne.Clipboard
@@ -129,6 +130,10 @@ func (w *testWindow) SetOnFocusGained(gained func()) {
 
 func (w *testWindow) SetOnFocusLost(lost func()) {
 	w.onFocusLost = lost
+}
+
+func (w *testWindow) SetOnResized(resized func(fyne.Size)) {
+	w.onResized = resized
 }
 
 func (w *testWindow) SetPadded(padded bool) {

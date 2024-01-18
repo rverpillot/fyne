@@ -102,6 +102,7 @@ type window struct {
 	onCloseIntercepted func()
 	onFocusGained      func()
 	onFocusLost        func()
+	onResized          func(fyne.Size)
 
 	menuTogglePending       fyne.KeyName
 	menuDeactivationPending fyne.KeyName

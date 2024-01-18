@@ -109,6 +109,10 @@ func (w *window) SetOnFocusLost(callback func()) {
 	// no-op on mobile
 }
 
+func (w *window) SetOnResized(callback func(fyne.Size)) {
+	// no-op on mobile
+}
+
 func (w *window) SetOnDropped(dropped func(fyne.Position, []fyne.URI)) {
 	// not implemented yet
 }

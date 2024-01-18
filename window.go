@@ -83,6 +83,9 @@ type Window interface {
 	// SetOnFocusLost sets a function that runs when the window loses focus.
 	SetOnFocusLost(func())
 
+	// SetOnResized sets a function that runs when the window is resized.
+	SetOnResized(func(Size))
+
 	// Show the window on screen.
 	Show()
 	// Hide the window from the user.
