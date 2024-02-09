@@ -574,6 +574,15 @@ func (t *builtinTheme) Icon(n fyne.ThemeIconName) fyne.Resource {
 	return icons[n]
 }
 
+// ListIconNames returns a list of all the available theme icons
+func ListIconNames() []fyne.ThemeIconName {
+	var list []fyne.ThemeIconName
+	for name := range icons {
+		list = append(list, name)
+	}
+	return list
+}
+
 // ThemedResource is a resource wrapper that will return a version of the resource with the main color changed
 // for the currently selected theme.
 type ThemedResource struct {
