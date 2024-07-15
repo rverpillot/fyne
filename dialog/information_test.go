@@ -64,8 +64,27 @@ func TestDialog_Resize(t *testing.T) {
 	assert.Equal(t, expectedHeight, theDialog.win.Content.Size().Height)
 }
 
+func TestDialog_TextWrapping(t *testing.T) {
+	window := test.NewTempWindow(t, nil)
+	window.Resize(fyne.NewSize(600, 400))
+
+	d := NewInformation("Title", "This is a really really long message that will be used to test the dialog text wrapping capabilities", window)
+	theDialog := d.(*dialog)
+	d.Show() // we cannot check window size if not shown
+
+	// limits width to 90% of window size
+	assert.Equal(t, float32(600.0*maxTextDialogWinPcntWidth), theDialog.desiredSize.Width)
+
+	theDialog.desiredSize = fyne.NewSquareSize(0)
+	window.Resize(fyne.NewSize(900, 400))
+	d.Show()
+
+	// limits width to absolute maximum
+	assert.Equal(t, maxTextDialogAbsoluteWidth, theDialog.desiredSize.Width)
+}
+
 func TestDialog_InformationCallback(t *testing.T) {
-	d := NewInformation("Information", "Hello World", test.NewWindow(nil))
+	d := NewInformation("Information", "Hello World", test.NewTempWindow(t, nil))
 	tapped := false
 	d.SetOnClosed(func() { tapped = true })
 	d.Show()
@@ -79,7 +98,7 @@ func TestDialog_InformationCallback(t *testing.T) {
 
 func TestDialog_ErrorCallback(t *testing.T) {
 	err := errors.New("Error message")
-	d := NewError(err, test.NewWindow(nil))
+	d := NewError(err, test.NewTempWindow(t, nil))
 	tapped := false
 	d.SetOnClosed(func() { tapped = true })
 	d.Show()

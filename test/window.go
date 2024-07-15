@@ -1,24 +1,37 @@
 package test
 
 import (
+	"testing"
+
 	"fyne.io/fyne/v2"
 )
 
-type testWindow struct {
+type window struct {
 	title              string
 	fullScreen         bool
 	fixedSize          bool
 	focused            bool
 	onClosed           func()
 	onCloseIntercepted func()
-	onFocusGained      func()
-	onFocusLost        func()
-	onResized          func(fyne.Size)
 
-	canvas    *testCanvas
-	clipboard fyne.Clipboard
-	driver    *testDriver
+	canvas    *canvas
+	clipboard clipboard
+	driver    *driver
 	menu      *fyne.MainMenu
+
+	onFocusGained func()
+	onFocusLost   func()
+	onResized     func(fyne.Size)
+}
+
+// NewTempWindow creates and registers a new window for test purposes.
+// This window will get removed automatically once the running test ends.
+//
+// Since: 2.5
+func NewTempWindow(t testing.TB, content fyne.CanvasObject) fyne.Window {
+	window := NewWindow(content)
+	t.Cleanup(window.Close)
+	return window
 }
 
 // NewWindow creates and registers a new window for test purposes
@@ -28,19 +41,19 @@ func NewWindow(content fyne.CanvasObject) fyne.Window {
 	return window
 }
 
-func (w *testWindow) Canvas() fyne.Canvas {
+func (w *window) Canvas() fyne.Canvas {
 	return w.canvas
 }
 
-func (w *testWindow) CenterOnScreen() {
+func (w *window) CenterOnScreen() {
 	// no-op
 }
 
-func (w *testWindow) Clipboard() fyne.Clipboard {
-	return w.clipboard
+func (w *window) Clipboard() fyne.Clipboard {
+	return &w.clipboard
 }
 
-func (w *testWindow) Close() {
+func (w *window) Close() {
 	if w.onClosed != nil {
 		w.onClosed()
 	}
@@ -48,110 +61,110 @@ func (w *testWindow) Close() {
 	w.driver.removeWindow(w)
 }
 
-func (w *testWindow) Content() fyne.CanvasObject {
+func (w *window) Content() fyne.CanvasObject {
 	return w.Canvas().Content()
 }
 
-func (w *testWindow) FixedSize() bool {
+func (w *window) FixedSize() bool {
 	return w.fixedSize
 }
 
-func (w *testWindow) FullScreen() bool {
+func (w *window) FullScreen() bool {
 	return w.fullScreen
 }
 
-func (w *testWindow) Hide() {
+func (w *window) Hide() {
 	w.focused = false
 }
 
-func (w *testWindow) Icon() fyne.Resource {
+func (w *window) Icon() fyne.Resource {
 	return fyne.CurrentApp().Icon()
 }
 
-func (w *testWindow) MainMenu() *fyne.MainMenu {
+func (w *window) MainMenu() *fyne.MainMenu {
 	return w.menu
 }
 
-func (w *testWindow) Padded() bool {
+func (w *window) Padded() bool {
 	return w.canvas.Padded()
 }
 
-func (w *testWindow) RequestFocus() {
+func (w *window) RequestFocus() {
 	for _, win := range w.driver.AllWindows() {
-		win.(*testWindow).focused = false
+		win.(*window).focused = false
 	}
 
 	w.focused = true
 }
 
-func (w *testWindow) Resize(size fyne.Size) {
+func (w *window) Resize(size fyne.Size) {
 	w.canvas.Resize(size)
 }
 
-func (w *testWindow) SetContent(obj fyne.CanvasObject) {
+func (w *window) SetContent(obj fyne.CanvasObject) {
 	w.Canvas().SetContent(obj)
 }
 
-func (w *testWindow) SetFixedSize(fixed bool) {
+func (w *window) SetFixedSize(fixed bool) {
 	w.fixedSize = fixed
 }
 
-func (w *testWindow) SetIcon(_ fyne.Resource) {
+func (w *window) SetIcon(_ fyne.Resource) {
 	// no-op
 }
 
-func (w *testWindow) SetFullScreen(fullScreen bool) {
+func (w *window) SetFullScreen(fullScreen bool) {
 	w.fullScreen = fullScreen
 }
 
-func (w *testWindow) SetMainMenu(menu *fyne.MainMenu) {
+func (w *window) SetMainMenu(menu *fyne.MainMenu) {
 	w.menu = menu
 }
 
-func (w *testWindow) SetMaster() {
+func (w *window) SetMaster() {
 	// no-op
 }
 
-func (w *testWindow) SetOnClosed(closed func()) {
+func (w *window) SetOnClosed(closed func()) {
 	w.onClosed = closed
 }
 
-func (w *testWindow) SetCloseIntercept(callback func()) {
+func (w *window) SetCloseIntercept(callback func()) {
 	w.onCloseIntercepted = callback
 }
 
-func (w *testWindow) SetOnDropped(dropped func(fyne.Position, []fyne.URI)) {
+func (w *window) SetOnDropped(dropped func(fyne.Position, []fyne.URI)) {
 
 }
 
-func (w *testWindow) SetOnFocusGained(gained func()) {
-	w.onFocusGained = gained
-}
-
-func (w *testWindow) SetOnFocusLost(lost func()) {
-	w.onFocusLost = lost
-}
-
-func (w *testWindow) SetOnResized(resized func(fyne.Size)) {
-	w.onResized = resized
-}
-
-func (w *testWindow) SetPadded(padded bool) {
+func (w *window) SetPadded(padded bool) {
 	w.canvas.SetPadded(padded)
 }
 
-func (w *testWindow) SetTitle(title string) {
+func (w *window) SetTitle(title string) {
 	w.title = title
 }
 
-func (w *testWindow) Show() {
+func (w *window) Show() {
 	w.RequestFocus()
 }
 
-func (w *testWindow) ShowAndRun() {
+func (w *window) ShowAndRun() {
 	w.Show()
 }
 
-func (w *testWindow) Title() string {
+func (w *window) Title() string {
 	return w.title
+}
+
+func (w *window) SetOnFocusGained(gained func()) {
+	w.onFocusGained = gained
+}
+
+func (w *window) SetOnFocusLost(lost func()) {
+	w.onFocusLost = lost
+}
+
+func (w *window) SetOnResized(resized func(fyne.Size)) {
+	w.onResized = resized
 }
