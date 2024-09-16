@@ -531,7 +531,7 @@ func (w *window) processMouseClicked(button desktop.MouseButton, action action, 
 
 	co, pos, _ := w.findObjectAtPositionMatching(w.canvas, mousePos, func(object fyne.CanvasObject) bool {
 		switch object.(type) {
-		case fyne.Tappable, fyne.SecondaryTappable, fyne.DoubleTappable, fyne.Focusable, desktop.Mouseable, desktop.Hoverable:
+		case fyne.Tappable, fyne.SecondaryTappable, fyne.DoubleTappable, fyne.Focusable, desktop.Mouseable:
 			return true
 		case fyne.Draggable:
 			if mouseDragStarted {
@@ -673,7 +673,7 @@ func (w *window) mouseClickedHandleTapDoubleTap(co fyne.CanvasObject, ev *fyne.P
 func (w *window) waitForDoubleTap(co fyne.CanvasObject, ev *fyne.PointEvent) {
 	var ctx context.Context
 	w.mouseLock.Lock()
-	ctx, w.mouseCancelFunc = context.WithDeadline(context.TODO(), time.Now().Add(doubleTapDelay))
+	ctx, w.mouseCancelFunc = context.WithDeadline(context.TODO(), time.Now().Add(w.driver.DoubleTapDelay()))
 	defer w.mouseCancelFunc()
 	w.mouseLock.Unlock()
 
@@ -832,12 +832,12 @@ func (w *window) processFocused(focus bool) {
 		if w.onFocusGained != nil {
 			w.QueueEvent(w.onFocusGained)
 		}
-		w.canvas.FocusGained()
+		w.QueueEvent(w.canvas.FocusGained)
 	} else {
 		if w.onFocusLost != nil {
 			w.QueueEvent(w.onFocusLost)
 		}
-		w.canvas.FocusLost()
+		w.QueueEvent(w.canvas.FocusLost)
 		w.mouseLock.Lock()
 		w.mousePos = fyne.Position{}
 		w.mouseLock.Unlock()
