@@ -321,11 +321,9 @@ func (w *window) processResized(width, height int) {
 		w.height = scale.ToScreenCoordinate(w.canvas, canvasSize.Height)
 	}
 
+	// Handle user resize callback
 	if w.onResized != nil {
-		w.QueueEvent(func() {
-			// w.onResized(fyne.NewSize(float32(width), float32(height)))
-			w.onResized(canvasSize)
-		})
+		w.onResized(canvasSize)
 	}
 
 	if !w.visible { // don't redraw if hidden
@@ -829,16 +827,17 @@ func (w *window) processFocused(focus bool) {
 			}
 		}
 		curWindow = w
+		// Handle user defined focus gained callback
 		if w.onFocusGained != nil {
-			w.QueueEvent(w.onFocusGained)
+			w.onFocusGained()
 		}
-		w.QueueEvent(w.canvas.FocusGained)
+		w.canvas.FocusGained()
 	} else {
+		// Handle user defined focus lost callback
 		if w.onFocusLost != nil {
-			w.QueueEvent(w.onFocusLost)
+			w.onFocusLost()
 		}
-		w.QueueEvent(w.canvas.FocusLost)
-		w.mouseLock.Lock()
+		w.canvas.FocusLost()
 		w.mousePos = fyne.Position{}
 		w.mouseLock.Unlock()
 
