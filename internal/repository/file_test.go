@@ -187,6 +187,14 @@ func TestFileRepositoryWriter(t *testing.T) {
 	barWriter.Close()
 	bazWriter.Close()
 
+	bazAppender, err := storage.Appender(baz)
+	assert.Nil(t, err)
+	n, err = bazAppender.Write([]byte{1, 2, 3, 4, 5})
+	assert.Nil(t, err)
+	assert.Equal(t, 5, n)
+
+	bazAppender.Close()
+
 	// now make sure we can read the data back correctly
 	fooReader, err := storage.Reader(foo)
 	assert.Nil(t, err)
@@ -203,7 +211,7 @@ func TestFileRepositoryWriter(t *testing.T) {
 	bazReader, err := storage.Reader(baz)
 	assert.Nil(t, err)
 	bazData, err := io.ReadAll(bazReader)
-	assert.Equal(t, []byte{5, 4, 3, 2, 1, 0}, bazData)
+	assert.Equal(t, []byte{5, 4, 3, 2, 1, 0, 1, 2, 3, 4, 5}, bazData)
 	assert.Nil(t, err)
 
 	// close the readers, since Windows won't let us delete things with
@@ -395,6 +403,39 @@ func TestFileRepositoryMove(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.Equal(t, []byte{1, 2, 3, 4, 5}, barData)
+
+	// Make sure that the source doesn't exist anymore.
+	ex, err := storage.Exists(foo)
+	assert.Nil(t, err)
+	assert.False(t, ex)
+}
+
+func TestFileRepositoryMoveDirectory(t *testing.T) {
+	dir := t.TempDir()
+
+	// Create a file in a dir to test with
+	parentPath := path.Join(dir, "parent")
+	fooPath := path.Join(parentPath, "foo")
+	newParentPath := path.Join(dir, "newParent")
+	newFooPath := path.Join(newParentPath, "foo")
+
+	_ = os.Mkdir(parentPath, 0755)
+	err := os.WriteFile(fooPath, []byte{1, 2, 3, 4, 5}, 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parent := storage.NewFileURI(parentPath)
+	foo := storage.NewFileURI(fooPath)
+	newParent := storage.NewFileURI(newParentPath)
+
+	err = storage.Move(parent, newParent)
+	assert.Nil(t, err)
+
+	newData, err := os.ReadFile(newFooPath)
+	assert.Nil(t, err)
+
+	assert.Equal(t, []byte{1, 2, 3, 4, 5}, newData)
 
 	// Make sure that the source doesn't exist anymore.
 	ex, err := storage.Exists(foo)

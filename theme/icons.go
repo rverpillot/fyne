@@ -1,6 +1,8 @@
 package theme
 
 import (
+	"image/color"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/internal/svg"
 )
@@ -55,6 +57,11 @@ const (
 	//
 	// Since: 2.5
 	IconNameCheckButtonFill fyne.ThemeIconName = "iconNameCheckButtonFill"
+
+	// IconNameCheckButtonPartial is the name of theme lookup for "partially" checked check button icon.
+	//
+	// Since: 2.6
+	IconNameCheckButtonPartial fyne.ThemeIconName = "partial"
 
 	// IconNameRadioButton is the name of theme lookup for radio button unchecked icon.
 	//
@@ -456,6 +463,11 @@ const (
 	// Since: 2.1
 	IconNameAccount fyne.ThemeIconName = "account"
 
+	// IconNameCalendar is the name of theme lookup for calendar icon.
+	//
+	// Since: 2.6
+	IconNameCalendar fyne.ThemeIconName = "calendar"
+
 	// IconNameLogin is the name of theme lookup for login icon.
 	//
 	// Since: 2.1
@@ -505,6 +517,7 @@ var (
 		IconNameCheckButton:        NewThemedResource(checkboxIconRes),
 		IconNameCheckButtonChecked: NewThemedResource(checkboxcheckedIconRes),
 		IconNameCheckButtonFill:    NewThemedResource(checkboxfillIconRes),
+		IconNameCheckButtonPartial: NewThemedResource(checkboxpartialIconRes),
 		IconNameRadioButton:        NewThemedResource(radiobuttonIconRes),
 		IconNameRadioButtonChecked: NewThemedResource(radiobuttoncheckedIconRes),
 		IconNameRadioButtonFill:    NewThemedResource(radiobuttonfillIconRes),
@@ -599,9 +612,10 @@ var (
 		IconNameStorage:  NewThemedResource(storageIconRes),
 		IconNameUpload:   NewThemedResource(uploadIconRes),
 
-		IconNameAccount: NewThemedResource(accountIconRes),
-		IconNameLogin:   NewThemedResource(loginIconRes),
-		IconNameLogout:  NewThemedResource(logoutIconRes),
+		IconNameAccount:  NewThemedResource(accountIconRes),
+		IconNameCalendar: NewThemedResource(calendarIconRes),
+		IconNameLogin:    NewThemedResource(loginIconRes),
+		IconNameLogout:   NewThemedResource(logoutIconRes),
 
 		IconNameList: NewThemedResource(listIconRes),
 		IconNameGrid: NewThemedResource(gridIconRes),
@@ -709,7 +723,7 @@ func (res *ThemedResource) ThemeColorName() fyne.ThemeColorName {
 
 // Content returns the underlying content of the resource adapted to the current text color.
 func (res *ThemedResource) Content() []byte {
-	return svg.Colorize(unwrapResource(res.source).Content(), Color(res.ThemeColorName()))
+	return colorizeLogError(unwrapResource(res.source).Content(), Color(res.ThemeColorName()))
 }
 
 // Error returns a different resource for indicating an error.
@@ -739,7 +753,7 @@ func (res *InvertedThemedResource) Name() string {
 // Content returns the underlying content of the resource adapted to the current background color.
 func (res *InvertedThemedResource) Content() []byte {
 	clr := Color(ColorNameBackground)
-	return svg.Colorize(unwrapResource(res.source).Content(), clr)
+	return colorizeLogError(unwrapResource(res.source).Content(), clr)
 }
 
 // ThemeColorName returns the fyne.ThemeColorName that is used as foreground color.
@@ -772,12 +786,20 @@ func (res *ErrorThemedResource) Name() string {
 
 // Content returns the underlying content of the resource adapted to the current background color.
 func (res *ErrorThemedResource) Content() []byte {
-	return svg.Colorize(unwrapResource(res.source).Content(), Color(ColorNameError))
+	return colorizeLogError(unwrapResource(res.source).Content(), Color(ColorNameError))
 }
 
 // Original returns the underlying resource that this error themed resource was adapted from
 func (res *ErrorThemedResource) Original() fyne.Resource {
 	return res.source
+}
+
+// ThemeColorName returns the fyne.ThemeColorName that is used as foreground color.
+// @implements fyne.ThemedResource
+//
+// Since: 2.6
+func (res *ErrorThemedResource) ThemeColorName() fyne.ThemeColorName {
+	return ColorNameError
 }
 
 // PrimaryThemedResource is a resource wrapper that will return a version of the resource with the main color changed
@@ -799,12 +821,20 @@ func (res *PrimaryThemedResource) Name() string {
 
 // Content returns the underlying content of the resource adapted to the current background color.
 func (res *PrimaryThemedResource) Content() []byte {
-	return svg.Colorize(unwrapResource(res.source).Content(), Color(ColorNamePrimary))
+	return colorizeLogError(unwrapResource(res.source).Content(), Color(ColorNamePrimary))
 }
 
 // Original returns the underlying resource that this primary themed resource was adapted from
 func (res *PrimaryThemedResource) Original() fyne.Resource {
 	return res.source
+}
+
+// ThemeColorName returns the fyne.ThemeColorName that is used as foreground color.
+// @implements fyne.ThemedResource
+//
+// Since: 2.6
+func (res *PrimaryThemedResource) ThemeColorName() fyne.ThemeColorName {
+	return ColorNamePrimary
 }
 
 // DisabledResource is a resource wrapper that will return an appropriate resource colorized by
@@ -820,7 +850,15 @@ func (res *DisabledResource) Name() string {
 
 // Content returns the disabled style content of the correct resource for the current theme
 func (res *DisabledResource) Content() []byte {
-	return svg.Colorize(unwrapResource(res.source).Content(), Color(ColorNameDisabled))
+	return colorizeLogError(unwrapResource(res.source).Content(), Color(ColorNameDisabled))
+}
+
+// ThemeColorName returns the fyne.ThemeColorName that is used as foreground color.
+// @implements fyne.ThemedResource
+//
+// Since: 2.6
+func (res *DisabledResource) ThemeColorName() fyne.ThemeColorName {
+	return ColorNameDisabled
 }
 
 // NewDisabledResource creates a resource that adapts to the current theme's DisabledColor setting.
@@ -1294,6 +1332,13 @@ func AccountIcon() fyne.Resource {
 	return safeIconLookup(IconNameAccount)
 }
 
+// CalendarIcon returns a resource containing the standard account icon for the current theme
+//
+// Since: 2.6
+func CalendarIcon() fyne.Resource {
+	return safeIconLookup(IconNameCalendar)
+}
+
 // LoginIcon returns a resource containing the standard login icon for the current theme
 func LoginIcon() fyne.Resource {
 	return safeIconLookup(IconNameLogin)
@@ -1364,4 +1409,12 @@ func unwrapResource(res fyne.Resource) fyne.Resource {
 			return res
 		}
 	}
+}
+
+func colorizeLogError(src []byte, clr color.Color) []byte {
+	content, err := svg.Colorize(src, clr)
+	if err != nil {
+		fyne.LogError("", err)
+	}
+	return content
 }

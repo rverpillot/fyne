@@ -8,6 +8,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/internal/cache"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/test"
@@ -21,8 +22,21 @@ import (
 func TestNewSelect(t *testing.T) {
 	combo := widget.NewSelect([]string{"1", "2"}, func(string) {})
 
-	assert.Equal(t, 2, len(combo.Options))
+	assert.Len(t, combo.Options, 2)
 	assert.Equal(t, "", combo.Selected)
+}
+
+func TestNewSelectWithData(t *testing.T) {
+	data := binding.NewString()
+	combo := widget.NewSelectWithData([]string{"1", "2", "3"}, data)
+
+	assert.Len(t, combo.Options, 3)
+	assert.Equal(t, "", combo.Selected)
+
+	err := data.Set("2")
+	assert.NoError(t, err)
+	waitForBinding()
+	assert.Equal(t, "2", combo.Selected)
 }
 
 func TestSelect_Align(t *testing.T) {
@@ -41,6 +55,52 @@ func TestSelect_Align(t *testing.T) {
 	sel.Alignment = fyne.TextAlignTrailing
 	sel.Refresh()
 	assertRendersToPlatformMarkup(t, "select/%s/trailing.xml", c)
+}
+
+func TestSelect_Options(t *testing.T) {
+	s := widget.NewSelect([]string{"1", "2", "3"}, nil)
+	s.SetSelected("2")
+	assert.Equal(t, "2", s.Selected)
+
+	s.SetOptions([]string{"4", "5"})
+	assert.Equal(t, "2", s.Selected)
+	s.Selected = ""
+	assert.Equal(t, "", s.Selected)
+}
+
+func TestSelect_Binding(t *testing.T) {
+	s := widget.NewSelect([]string{"1", "2", "3"}, nil)
+	s.SetSelected("2")
+	assert.Equal(t, "2", s.Selected)
+	waitForBinding() // this time it is the de-echo before binding
+
+	str := binding.NewString()
+	s.Bind(str)
+	waitForBinding()
+	value, err := str.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, "", value)
+	assert.Equal(t, "2", s.Selected) // no match to options, so keep previous value
+
+	err = str.Set("3")
+	assert.NoError(t, err)
+	waitForBinding()
+	assert.Equal(t, "3", s.Selected)
+
+	s.Unbind()
+	assert.Nil(t, s.OnChanged)
+	err = str.Set("1")
+	assert.NoError(t, err)
+	val1, err := str.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, "1", val1)
+	assert.Equal(t, "3", s.Selected)
+
+	s.SetSelected("2")
+	val1, err = str.Get()
+	assert.NoError(t, err)
+	assert.Equal(t, "1", val1)
+	assert.Equal(t, "2", s.Selected)
 }
 
 func TestSelect_ChangeTheme(t *testing.T) {
@@ -95,11 +155,11 @@ func TestSelect_ClipValue(t *testing.T) {
 
 	r := cache.Renderer(combo)
 	text := r.Objects()[2].(*widget.RichText)
-	assert.Equal(t, 1, len(text.Segments))
+	assert.Len(t, text.Segments, 1)
 	assert.Equal(t, "some text", text.Segments[0].(*widget.TextSegment).Text)
 
 	r2 := cache.Renderer(text)
-	assert.Equal(t, 1, len(r2.Objects()))
+	assert.Len(t, r2.Objects(), 1)
 	assert.Equal(t, "some …", r2.Objects()[0].(*canvas.Text).Text)
 }
 
@@ -421,7 +481,7 @@ func TestSelect_Tapped(t *testing.T) {
 
 	test.Tap(combo)
 	canvas := fyne.CurrentApp().Driver().CanvasForObject(combo)
-	assert.Equal(t, 1, len(canvas.Overlays().List()))
+	assert.Len(t, canvas.Overlays().List(), 1)
 	assertRendersToPlatformMarkup(t, "select/%s/tapped.xml", w.Canvas())
 }
 
@@ -437,7 +497,7 @@ func TestSelect_Tapped_Constrained(t *testing.T) {
 	canvas := w.Canvas()
 	combo.Move(fyne.NewPos(canvas.Size().Width-10, canvas.Size().Height-10))
 	test.Tap(combo)
-	assert.Equal(t, 1, len(canvas.Overlays().List()))
+	assert.Len(t, canvas.Overlays().List(), 1)
 	assertRendersToPlatformMarkup(t, "select/%s/tapped_constrained.xml", w.Canvas())
 }
 

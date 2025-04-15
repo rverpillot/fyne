@@ -19,38 +19,38 @@ func TestFormSize(t *testing.T) {
 		{Text: "test2", Widget: NewEntry()},
 	}}
 
-	assert.Equal(t, 2, len(form.Items))
+	assert.Len(t, form.Items, 2)
 }
 
 func TestForm_CreateRenderer(t *testing.T) {
 	form := &Form{Items: []*FormItem{{Text: "test1", Widget: NewEntry()}}}
 	assert.NotNil(t, test.TempWidgetRenderer(t, form))
-	assert.Equal(t, 2, len(form.itemGrid.Objects))
+	assert.Len(t, form.itemGrid.Objects, 2)
 
 	form.Append("test2", NewEntry())
-	assert.Equal(t, 4, len(form.itemGrid.Objects))
+	assert.Len(t, form.itemGrid.Objects, 4)
 }
 
 func TestForm_Append(t *testing.T) {
 	form := &Form{Items: []*FormItem{{Text: "test1", Widget: NewEntry()}}}
-	assert.Equal(t, 1, len(form.Items))
+	assert.Len(t, form.Items, 1)
 
 	form.Append("test2", NewEntry())
-	assert.True(t, len(form.Items) == 2)
+	assert.Len(t, form.Items, 2)
 
 	item := &FormItem{Text: "test3", Widget: NewEntry()}
 	form.AppendItem(item)
-	assert.True(t, len(form.Items) == 3)
+	assert.Len(t, form.Items, 3)
 	assert.Equal(t, item, form.Items[2])
 }
 
 func TestForm_Append_Items(t *testing.T) {
 	form := &Form{Items: []*FormItem{{Text: "test1", Widget: NewEntry()}}}
-	assert.Equal(t, 1, len(form.Items))
+	assert.Len(t, form.Items, 1)
 	renderer := test.TempWidgetRenderer(t, form)
 
 	form.Items = append(form.Items, NewFormItem("test2", NewEntry()))
-	assert.True(t, len(form.Items) == 2)
+	assert.Len(t, form.Items, 2)
 
 	form.Refresh()
 	c := renderer.Objects()[0].(*fyne.Container).Objects[0].(*fyne.Container)
@@ -60,13 +60,14 @@ func TestForm_Append_Items(t *testing.T) {
 func TestForm_CustomButtonsText(t *testing.T) {
 	form := &Form{OnSubmit: func() {}, OnCancel: func() {}}
 	form.Append("test", NewEntry())
-	assert.Equal(t, "Submit", form.SubmitText)
-	assert.Equal(t, "Cancel", form.CancelText)
+	assert.Equal(t, "Submit", form.submitButton.Text)
+	assert.Equal(t, "Cancel", form.cancelButton.Text)
 
-	form = &Form{OnSubmit: func() {}, SubmitText: "Apply",
-		OnCancel: func() {}, CancelText: "Close"}
-	assert.Equal(t, "Apply", form.SubmitText)
-	assert.Equal(t, "Close", form.CancelText)
+	form.SubmitText = "Apply"
+	form.CancelText = "Close"
+	form.Refresh()
+	assert.Equal(t, "Apply", form.submitButton.Text)
+	assert.Equal(t, "Close", form.cancelButton.Text)
 }
 
 func TestForm_AddRemoveButton(t *testing.T) {
@@ -176,12 +177,15 @@ func TestForm_Hints(t *testing.T) {
 	w := test.NewWindow(form)
 	defer w.Close()
 
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/hint_initial.png", w.Canvas().Capture())
 
 	test.Type(entry2, "n")
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/hint_invalid.png", w.Canvas().Capture())
 
 	test.Type(entry2, "ot-")
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/hint_valid.png", w.Canvas().Capture())
 }
 
@@ -300,17 +304,21 @@ func TestForm_Disable_Validation(t *testing.T) {
 	w := test.NewWindow(form)
 	defer w.Close()
 
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/disable_validation_initial.png", w.Canvas().Capture())
 
 	form.Disable()
 
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/disable_validation_disabled_invalid.png", w.Canvas().Capture())
 
 	form.Enable()
 
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/disable_validation_enabled_invalid.png", w.Canvas().Capture())
 
 	entry.SetText("15-true")
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/disable_validation_enabled_valid.png", w.Canvas().Capture())
 
 	// ensure we don't re-enable the form when entering something valid
@@ -318,6 +326,7 @@ func TestForm_Disable_Validation(t *testing.T) {
 	form.Disable()
 	entry.SetText("15-true")
 
+	w.Resize(form.MinSize().Add(fyne.NewSquareSize(theme.Padding() * 2)))
 	test.AssertImageMatches(t, "form/disable_validation_disabled_valid.png", w.Canvas().Capture())
 }
 

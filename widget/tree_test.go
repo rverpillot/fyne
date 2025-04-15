@@ -43,8 +43,8 @@ func TestNewTreeWithData(t *testing.T) {
 
 	template := widget.NewLabel("Template Object")
 
-	assert.Equal(t, 1000, len(tree.ChildUIDs("")))
-	assert.Equal(t, 10, len(tree.ChildUIDs("1")))
+	assert.Len(t, tree.ChildUIDs(""), 1000)
+	assert.Len(t, tree.ChildUIDs("1"), 10)
 	assert.GreaterOrEqual(t, tree.MinSize().Width, template.MinSize().Width)
 }
 
@@ -326,7 +326,6 @@ func TestTree_OverrideTheme(t *testing.T) {
 	bg := canvas.NewRectangle(normal.Color(theme.ColorNameBackground, theme.VariantDark))
 	window.SetContent(&fyne.Container{Layout: layout.NewStackLayout(),
 		Objects: []fyne.CanvasObject{bg, container.NewThemeOverride(tree, normal)}})
-	window.Resize(fyne.NewSize(220, 220))
 	test.AssertImageMatches(t, "tree/theme_initial.png", window.Canvas().Capture())
 }
 

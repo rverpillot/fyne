@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/cmd/fyne_demo/tutorials"
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -73,6 +74,12 @@ func main() {
 		w.SetContent(split)
 	}
 	w.Resize(fyne.NewSize(640, 460))
+
+	notice := widget.NewRichTextFromMarkdown(
+		"This demo has been moved to a new repository.\n\n[Fyne demo on GitHub](https://github.com/fyne-io/demo)")
+	notice.Segments[2].(*widget.HyperlinkSegment).Alignment = fyne.TextAlignCenter
+	dialog.ShowCustom("Fyne Demo Moved", "OK", notice, w)
+
 	w.ShowAndRun()
 }
 
@@ -133,19 +140,19 @@ func makeMenu(a fyne.App, w fyne.Window) *fyne.MainMenu {
 		openSettings()
 	})
 
-	cutShortcut := &fyne.ShortcutCut{Clipboard: w.Clipboard()}
+	cutShortcut := &fyne.ShortcutCut{Clipboard: a.Clipboard()}
 	cutItem := fyne.NewMenuItem("Cut", func() {
-		shortcutFocused(cutShortcut, w)
+		shortcutFocused(cutShortcut, a.Clipboard(), w.Canvas().Focused())
 	})
 	cutItem.Shortcut = cutShortcut
-	copyShortcut := &fyne.ShortcutCopy{Clipboard: w.Clipboard()}
+	copyShortcut := &fyne.ShortcutCopy{Clipboard: a.Clipboard()}
 	copyItem := fyne.NewMenuItem("Copy", func() {
-		shortcutFocused(copyShortcut, w)
+		shortcutFocused(copyShortcut, a.Clipboard(), w.Canvas().Focused())
 	})
 	copyItem.Shortcut = copyShortcut
-	pasteShortcut := &fyne.ShortcutPaste{Clipboard: w.Clipboard()}
+	pasteShortcut := &fyne.ShortcutPaste{Clipboard: a.Clipboard()}
 	pasteItem := fyne.NewMenuItem("Paste", func() {
-		shortcutFocused(pasteShortcut, w)
+		shortcutFocused(pasteShortcut, a.Clipboard(), w.Canvas().Focused())
 	})
 	pasteItem.Shortcut = pasteShortcut
 	performFind := func() { fmt.Println("Menu Find") }
@@ -228,6 +235,11 @@ func makeNav(setTutorial func(tutorial tutorials.Tutorial), loadPrevious bool) f
 		},
 		OnSelected: func(uid string) {
 			if t, ok := tutorials.Tutorials[uid]; ok {
+				for _, f := range tutorials.OnChangeFuncs {
+					f()
+				}
+				tutorials.OnChangeFuncs = nil // Loading a page registers a new cleanup.
+
 				a.Preferences().SetString(preferenceCurrentTutorial, uid)
 				setTutorial(t)
 			}
@@ -251,16 +263,16 @@ func makeNav(setTutorial func(tutorial tutorials.Tutorial), loadPrevious bool) f
 	return container.NewBorder(nil, themes, nil, nil, tree)
 }
 
-func shortcutFocused(s fyne.Shortcut, w fyne.Window) {
+func shortcutFocused(s fyne.Shortcut, cb fyne.Clipboard, f fyne.Focusable) {
 	switch sh := s.(type) {
 	case *fyne.ShortcutCopy:
-		sh.Clipboard = w.Clipboard()
+		sh.Clipboard = cb
 	case *fyne.ShortcutCut:
-		sh.Clipboard = w.Clipboard()
+		sh.Clipboard = cb
 	case *fyne.ShortcutPaste:
-		sh.Clipboard = w.Clipboard()
+		sh.Clipboard = cb
 	}
-	if focused, ok := w.Canvas().Focused().(fyne.Shortcutable); ok {
+	if focused, ok := f.(fyne.Shortcutable); ok {
 		focused.TypedShortcut(s)
 	}
 }

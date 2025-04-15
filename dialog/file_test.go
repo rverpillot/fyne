@@ -47,7 +47,6 @@ func comparePaths(t *testing.T, u1, u2 fyne.ListableURI) bool {
 }
 
 func TestEffectiveStartingDir(t *testing.T) {
-
 	homeString, err := os.UserHomeDir()
 	if err != nil {
 		t.Skipf("os.Gethome() failed, cannot run this test on this system (error stat()-ing ../) error was '%s'", err)
@@ -106,7 +105,28 @@ func TestEffectiveStartingDir(t *testing.T) {
 		t.Errorf("Expected effectiveStartingDir() to be '%s', but it was '%s'",
 			expect, res)
 	}
+}
 
+func TestFileDialogStartRemember(t *testing.T) {
+	testPath, err := filepath.Abs("./testdata")
+	assert.Nil(t, err)
+	start, err := storage.ListerForURI(storage.NewFileURI(testPath))
+	if err != nil {
+		t.Skipf("could not get lister for working directory: %s", err)
+	}
+
+	w := test.NewTempWindow(t, widget.NewLabel("Content"))
+	d := NewFileOpen(nil, w)
+	d.SetLocation(start)
+	d.Show()
+
+	assert.Equal(t, start.String(), d.dialog.dir.String())
+	d.Hide()
+
+	d2 := NewFileOpen(nil, w)
+	d2.Show()
+	assert.Equal(t, start.String(), d.dialog.dir.String())
+	d2.Hide()
 }
 
 func TestFileDialogResize(t *testing.T) {
@@ -201,9 +221,9 @@ func TestShowFileOpen(t *testing.T) {
 	open := buttons.Objects[1].(*widget.Button)
 	//body
 	breadcrumb := ui.Objects[0].(*container.Split).Trailing.(*fyne.Container).Objects[0].(*container.Scroll).Content.(*fyne.Container).Objects[0].(*fyne.Container)
-	assert.Greater(t, len(breadcrumb.Objects), 0)
+	assert.NotEmpty(t, breadcrumb.Objects)
 
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	components := strings.Split(testData.String()[7:], "/")
 	if components[0] == "" {
 		// Splitting a unix path will give a "" at the beginning, but we actually want the path bar to show "/".
@@ -217,7 +237,7 @@ func TestShowFileOpen(t *testing.T) {
 
 	files := ui.Objects[0].(*container.Split).Trailing.(*fyne.Container).Objects[1].(*container.Scroll).Content.(*fyne.Container).Objects[0].(*widget.GridWrap)
 	objects := test.TempWidgetRenderer(t, files).Objects()[0].(*container.Scroll).Content.(*fyne.Container).Objects
-	assert.Greater(t, len(objects), 0)
+	assert.NotEmpty(t, objects)
 
 	fileName := test.TempWidgetRenderer(t, objects[0].(fyne.Widget)).Objects()[1].(*fileDialogItem).name
 	assert.Equal(t, lang.L("(Parent)"), fileName)
@@ -240,12 +260,12 @@ func TestShowFileOpen(t *testing.T) {
 
 	test.Tap(open)
 	assert.Nil(t, win.Canvas().Overlays().Top())
-	assert.Nil(t, openErr)
+	assert.NoError(t, openErr)
 
 	assert.Equal(t, target.location.String(), chosen.URI().String())
 
 	err = chosen.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestHiddenFiles(t *testing.T) {
@@ -286,7 +306,7 @@ func TestHiddenFiles(t *testing.T) {
 
 	files := ui.Objects[0].(*container.Split).Trailing.(*fyne.Container).Objects[1].(*container.Scroll).Content.(*fyne.Container).Objects[0].(*widget.GridWrap)
 	objects := test.TempWidgetRenderer(t, files).Objects()[0].(*container.Scroll).Content.(*fyne.Container).Objects
-	assert.Greater(t, len(objects), 0)
+	assert.NotEmpty(t, objects)
 
 	var target *fileDialogItem
 	for _, icon := range objects {
@@ -333,7 +353,7 @@ func TestShowFileSave(t *testing.T) {
 
 	files := ui.Objects[0].(*container.Split).Trailing.(*fyne.Container).Objects[1].(*container.Scroll).Content.(*fyne.Container).Objects[0].(*widget.GridWrap)
 	objects := test.TempWidgetRenderer(t, files).Objects()[0].(*container.Scroll).Content.(*fyne.Container).Objects
-	assert.Greater(t, len(objects), 0)
+	assert.NotEmpty(t, objects)
 
 	item := test.TempWidgetRenderer(t, objects[0].(fyne.Widget)).Objects()[1].(*fileDialogItem)
 	assert.Equal(t, lang.L("(Parent)"), item.name)
@@ -373,7 +393,7 @@ func TestShowFileSave(t *testing.T) {
 	test.Type(nameEntry, "v2_")
 	test.Tap(save)
 	assert.Nil(t, win.Canvas().Overlays().Top())
-	assert.Nil(t, saveErr)
+	assert.NoError(t, saveErr)
 	targetParent, err := storage.Parent(target.location)
 	if err != nil {
 		t.Error(err)
@@ -382,10 +402,10 @@ func TestShowFileSave(t *testing.T) {
 	assert.Equal(t, expectedPath.String(), chosen.URI().String())
 
 	err = chosen.Close()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	pathString := expectedPath.String()[len(expectedPath.Scheme())+3:]
 	err = os.Remove(pathString)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 func TestFileFilters(t *testing.T) {
@@ -413,13 +433,13 @@ func TestFileFilters(t *testing.T) {
 	for _, uri := range f.dialog.data {
 		ok, _ := storage.CanList(uri)
 		if !ok {
-			assert.Equal(t, uri.Extension(), ".png")
+			assert.Equal(t, ".png", uri.Extension())
 			count++
 		}
 	}
 
 	// NOTE: This count needs to be updated when more test images are added.
-	assert.Equal(t, 8, count)
+	assert.Equal(t, 10, count)
 
 	f.SetFilter(storage.NewMimeTypeFileFilter([]string{"image/jpeg"}))
 
@@ -427,7 +447,7 @@ func TestFileFilters(t *testing.T) {
 	for _, uri := range f.dialog.data {
 		ok, _ := storage.CanList(uri)
 		if !ok {
-			assert.Equal(t, uri.MimeType(), "image/jpeg")
+			assert.Equal(t, "image/jpeg", uri.MimeType())
 			count++
 		}
 	}
@@ -442,13 +462,13 @@ func TestFileFilters(t *testing.T) {
 		ok, _ := storage.CanList(uri)
 		if !ok {
 			mimeType := strings.Split(uri.MimeType(), "/")[0]
-			assert.Equal(t, mimeType, "image")
+			assert.Equal(t, "image", mimeType)
 			count++
 		}
 	}
 
 	// NOTE: This count needs to be updated when more test images are added.
-	assert.Equal(t, 9, count)
+	assert.Equal(t, 11, count)
 }
 
 func TestFileSort(t *testing.T) {
@@ -496,10 +516,11 @@ func TestView(t *testing.T) {
 	win := test.NewTempWindow(t, widget.NewLabel("Content"))
 
 	dlg := NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Nil(t, reader)
 	}, win)
 
+	dlg.SetTitleText("File Selection")
 	dlg.SetConfirmText("Yes")
 	dlg.SetDismissText("Dismiss")
 	dlg.Show()
@@ -543,6 +564,8 @@ func TestView(t *testing.T) {
 	assert.Equal(t, "", toggleViewButton.Text)
 	assert.Equal(t, theme.ListIcon().Name(), toggleViewButton.Icon.Name())
 
+	title := ui.Objects[1].(*fyne.Container).Objects[1].(*widget.Label)
+	assert.Equal(t, "File Selection", title.Text)
 	confirm := ui.Objects[2].(*fyne.Container).Objects[0].(*fyne.Container).Objects[1].(*widget.Button)
 	assert.Equal(t, "Yes", confirm.Text)
 	dismiss := ui.Objects[2].(*fyne.Container).Objects[0].(*fyne.Container).Objects[0].(*widget.Button)
@@ -555,10 +578,11 @@ func TestSetView(t *testing.T) {
 	fyne.CurrentApp().Preferences().SetInt(viewLayoutKey, int(defaultView))
 
 	dlg := NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Nil(t, reader)
 	}, win)
 
+	dlg.SetTitleText("File Selection")
 	dlg.SetConfirmText("Yes")
 	dlg.SetDismissText("Dismiss")
 
@@ -582,6 +606,8 @@ func TestSetView(t *testing.T) {
 	assert.Equal(t, "", toggleViewButton.Text)
 	assert.Equal(t, theme.GridIcon(), toggleViewButton.Icon)
 
+	title := ui.Objects[1].(*fyne.Container).Objects[1].(*widget.Label)
+	assert.Equal(t, "File Selection", title.Text)
 	confirm := ui.Objects[2].(*fyne.Container).Objects[0].(*fyne.Container).Objects[1].(*widget.Button)
 	assert.Equal(t, "Yes", confirm.Text)
 	dismiss := ui.Objects[2].(*fyne.Container).Objects[0].(*fyne.Container).Objects[0].(*widget.Button)
@@ -608,7 +634,7 @@ func TestSetViewPreferences(t *testing.T) {
 	prefs.SetInt(viewLayoutKey, int(GridView))
 
 	dlg := NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Nil(t, reader)
 	}, win)
 
@@ -642,7 +668,7 @@ func TestViewPreferences(t *testing.T) {
 	prefs.SetInt(viewLayoutKey, -1)
 
 	dlg := NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Nil(t, reader)
 	}, win)
 
@@ -679,7 +705,7 @@ func TestFileFavorites(t *testing.T) {
 	win := test.NewTempWindow(t, widget.NewLabel("Content"))
 
 	dlg := NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Nil(t, reader)
 	}, win)
 
@@ -697,7 +723,7 @@ func TestFileFavorites(t *testing.T) {
 	assert.Len(t, dlg.dialog.favorites, len(favoriteLocations)+len(places))
 
 	favoritesList := ui.Objects[0].(*container.Split).Leading.(*widget.List)
-	assert.Equal(t, favoritesList.Length(), len(dlg.dialog.favorites))
+	assert.Len(t, dlg.dialog.favorites, favoritesList.Length())
 
 	for i := 0; i < favoritesList.Length(); i++ {
 		favoritesList.Select(i)
@@ -713,11 +739,11 @@ func TestFileFavorites(t *testing.T) {
 		}
 
 		ok, err := storage.Exists(dlg.dialog.dir)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.True(t, ok)
 	}
 
-	test.Tap(dlg.dialog.dismiss)
+	dlg.Dismiss()
 }
 
 func TestSetFileNameBeforeShow(t *testing.T) {
@@ -775,7 +801,7 @@ func TestCreateNewFolderInDir(t *testing.T) {
 	win := test.NewTempWindow(t, widget.NewLabel("Content"))
 
 	folderDialog := NewFolderOpen(func(lu fyne.ListableURI, err error) {
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	}, win)
 	folderDialog.SetConfirmText("Choose")
 	folderDialog.SetDismissText("Cancel")
