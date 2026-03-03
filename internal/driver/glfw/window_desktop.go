@@ -813,6 +813,10 @@ func (w *window) view() *glfw.Window {
 	return w.viewport
 }
 
+func (w *window) Native() any {
+	return w.view()
+}
+
 // wrapInnerWindow is a no-op to match what the web driver provides
 func wrapInnerWindow(*container.InnerWindow, fyne.Window, *gLDriver) fyne.Window {
 	return nil

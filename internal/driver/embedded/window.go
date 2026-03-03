@@ -132,6 +132,10 @@ func (w *noosWindow) Clipboard() fyne.Clipboard {
 	return nil
 }
 
+func (w *noosWindow) Native() any {
+	return nil
+}
+
 func newWindow(d *noosDriver) fyne.Window {
 	return &noosWindow{c: newTouchCanvas(), d: d}
 }

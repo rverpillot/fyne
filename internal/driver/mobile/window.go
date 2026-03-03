@@ -204,6 +204,10 @@ func (w *window) RescaleContext() {
 	// TODO
 }
 
+func (w *window) Native() any {
+	return w.handle
+}
+
 func (w *window) Context() any {
 	return fyne.CurrentApp().Driver().(*driver).glctx
 }

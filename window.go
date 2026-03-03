@@ -104,4 +104,7 @@ type Window interface {
 	//
 	// Deprecated: use App.Clipboard() instead.
 	Clipboard() Clipboard
+
+	// Native returns the underlying platform-specific window object.
+	Native() any
 }
