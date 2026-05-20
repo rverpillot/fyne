@@ -3,6 +3,51 @@
 This file lists the main changes with each version of the Fyne toolkit.
 More detailed release notes can be found on the [releases page](https://github.com/fyne-io/fyne/releases). 
 
+## 2.7.4 - 12 May 2026
+
+### Fixed
+
+* SIGSEGV in glfwPollEvents after SetMainMenu rebuild with separator items (macOS) (#6264)
+* Rasters created from NewRasterFromImage unexpectedly stretches the image (#6242)
+* Infinite Progress Bar widget will not automatically start until a Refresh() or Start() is called (#6221)
+* TextGrid: MinSize do not work when line number is visible (#6218)
+* InnerWindow drags past MultiWindows border (#6210)
+* Layout issue with fyne.TextWordWrap (#6181)
+* Hangul (Korean) text renders as U+FFFD (�) on Windows in v2.7 (#6146)
+* Android: storage.List(uri) call results in crash when permission has expired (#6117)
+* Fix strange wrapping which results in one char per line
+* Unexpected fyne.Do errors on android (#5664)
+* Local function is not call on the main Fyne runtime on mobile (#5868)
+* Fix Wide Character's width calculation in TextGrid
+* Various system tray fixes
+* Speed improvement in rendering scrolled text
+* Support OpenURL in mobile simulator
+* When using local metadata for go run also check Icon.png
+
+
+## 2.7.3 - 21 Feb 2026
+
+### Fixed
+
+* systray not functional within snap sandbox (systray#64)
+* A dialog with a table. Selecting a cell and closing the dialog produces a Fyne error (#5166)
+* Fix JNI crash due to invalid global reference when accessing Android file streams (#6067)
+* Low frame rate with animated rectangles on 2.7.x (#6040)
+* Random panic when launching the app (#5981)
+* Tree Widget constantly calls IsBranch and ChildrenUIs (#4339)
+* Font scanning fails in Flatpak due to broken symlinks
+* Correct system tray icon on Linux when using SVG
+* Button press animation sometimes leaks outside the bounds of the button (#6096)
+* SVG cannot be loaded if it has currentColor at root element (#6102)
+* Wrapped text is rendered poorly (blurred) (#4390)
+* Blurry text in mobile Linux (#2280)
+* On 2.3.0 text is fuzzy (#3464)
+* Correct presentation of HTML entities when using markdown in RichText
+* Accordion kills CPU by inefficient MinSize implementation (#6108)
+* Tree with no data (with Accordion?) - triggers endless layout loop (#6094)
+* NewRichTextFromMarkdown can't handle nested lists (#6113)
+
+
 ## 2.7.2 - 6 Jan 2026
 
 ### Changed
