@@ -138,3 +138,7 @@ func (w *window) ShowAndRun() {
 func (w *window) Title() string {
 	return w.title
 }
+
+func (w *window) Native() any {
+	return w
+}
