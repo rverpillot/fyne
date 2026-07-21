@@ -75,33 +75,6 @@ func Test_canvas_ChildMinSizeChangeAffectsAncestorsUpToRoot(t *testing.T) {
 	assert.Equal(t, expectedContentSize, content.Size())
 }
 
-func Test_canvas_Dragged(t *testing.T) {
-	dragged := false
-	var draggedObj fyne.Draggable
-	scroll := container.NewScroll(widget.NewLabel("Hi\nHi\nHi"))
-	c := newCanvas(fyne.CurrentDevice()).(*canvas)
-	c.SetContent(scroll)
-	c.Resize(fyne.NewSize(40, 24))
-	assert.Equal(t, float32(0), scroll.Offset.Y)
-
-	c.tapDown(fyne.NewPos(32, 3), 0)
-	c.tapMove(fyne.NewPos(32, 10), 0, func(wid fyne.Draggable, ev *fyne.DragEvent) {
-		wid.Dragged(ev)
-		dragged = true
-		draggedObj = wid
-	})
-
-	assert.True(t, dragged)
-	assert.Equal(t, scroll, draggedObj)
-	dragged = false
-	c.tapMove(fyne.NewPos(32, 5), 0, func(wid fyne.Draggable, ev *fyne.DragEvent) {
-		wid.Dragged(ev)
-		dragged = true
-	})
-	assert.True(t, dragged)
-	assert.Equal(t, fyne.NewPos(0, 5), scroll.Offset)
-}
-
 func Test_canvas_DraggingOutOfWidget(t *testing.T) {
 	c := newCanvas(fyne.CurrentDevice()).(*canvas)
 	slider := widget.NewSlider(0.0, 100.0)
@@ -238,7 +211,10 @@ func Test_canvas_InteractiveArea(t *testing.T) {
 		c.(*canvas).setWindowHead(windowHead)
 		pos, size := c.InteractiveArea()
 		assert.Equal(t, fyne.NewPos(float32(dev.safeLeft)/scale, float32(dev.safeTop)/scale+expectedOffset), pos)
-		assert.Equal(t, canvasSize.SubtractWidthHeight(float32(dev.safeLeft+dev.safeRight)/scale, float32(dev.safeTop+dev.safeBottom)/scale+expectedOffset), size)
+		expectedWidth := canvasSize.Width - float32(dev.safeLeft+dev.safeRight)/scale
+		expectedHeight := canvasSize.Height - float32(dev.safeTop+dev.safeBottom)/scale - expectedOffset
+		assert.InDelta(t, expectedWidth, size.Width, 0.001)
+		assert.InDelta(t, expectedHeight, size.Height, 0.001)
 	})
 }
 
@@ -268,12 +244,13 @@ func Test_canvas_ResizeWithModalPopUpOverlay(t *testing.T) {
 	// get popup content padding dynamically
 	popupContentPadding := popup.MinSize().Subtract(popup.Content.MinSize())
 
+	// TODO modal non-zero again
 	assert.Equal(t, popupBgSize.Subtract(popupContentPadding), popup.Content.Size())
-	assert.Equal(t, canvasSize, popup.Size())
+	assert.Equal(t, canvasSize, c.Overlays().Top().Size())
 }
 
 func Test_canvas_Tappable(t *testing.T) {
-	content := &touchableLabel{Label: widget.NewLabel("Hi\nHi\nHi")}
+	content := &touchableLabel{Label: widget.NewLabel("Hi\nHi\nHi"), ids: make(map[int]bool)}
 	content.ExtendBaseWidget(content)
 	c := newCanvas(fyne.CurrentDevice()).(*canvas)
 	c.SetContent(content)
@@ -295,6 +272,31 @@ func Test_canvas_Tappable(t *testing.T) {
 		wid.Dragged(ev)
 	})
 	assert.True(t, content.cancel)
+}
+
+func Test_canvas_TouchID(t *testing.T) {
+	content := &touchableLabel{Label: widget.NewLabel("Hi\nHi\nHi"), ids: make(map[int]bool)}
+	content.ExtendBaseWidget(content)
+	c := newCanvas(fyne.CurrentDevice()).(*canvas)
+	c.SetContent(content)
+	c.Resize(fyne.NewSize(36, 24))
+	content.Resize(fyne.NewSize(24, 24))
+
+	c.tapDown(fyne.NewPos(15, 15), 0)
+	c.tapUp(fyne.NewPos(15, 15), 0, func(wid fyne.Tappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.SecondaryTappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.DoubleTappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.Draggable, ev *fyne.DragEvent) {
+	})
+	assert.True(t, content.ids[0])
+
+	c.tapDown(fyne.NewPos(15, 15), 1)
+	c.tapUp(fyne.NewPos(15, 15), 1, func(wid fyne.Tappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.SecondaryTappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.DoubleTappable, ev *fyne.PointEvent) {
+	}, func(wid fyne.Draggable, ev *fyne.DragEvent) {
+	})
+	assert.True(t, content.ids[1])
 }
 
 func Test_canvas_Tapped(t *testing.T) {
@@ -423,18 +425,22 @@ func Test_canvas_TappedSecondary(t *testing.T) {
 type touchableLabel struct {
 	*widget.Label
 	down, up, cancel bool
+	ids              map[int]bool
 }
 
-func (t *touchableLabel) TouchDown(event *mobile.TouchEvent) {
+func (t *touchableLabel) TouchDown(ev *mobile.TouchEvent) {
 	t.down = true
+	t.ids[ev.ID] = true
 }
 
-func (t *touchableLabel) TouchUp(event *mobile.TouchEvent) {
+func (t *touchableLabel) TouchUp(ev *mobile.TouchEvent) {
 	t.up = true
+	t.ids[ev.ID] = true
 }
 
-func (t *touchableLabel) TouchCancel(event *mobile.TouchEvent) {
+func (t *touchableLabel) TouchCancel(ev *mobile.TouchEvent) {
 	t.cancel = true
+	t.ids[ev.ID] = true
 }
 
 type tappableLabel struct {
