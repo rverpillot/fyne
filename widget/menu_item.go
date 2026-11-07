@@ -41,6 +41,7 @@ func (i *menuItem) Child() *Menu {
 		child := NewMenu(i.Item.ChildMenu)
 		child.Hide()
 		child.OnDismiss = i.parent.Dismiss
+		child.isSubmenu = true
 		i.child = child
 	}
 	return i.child
@@ -298,6 +299,7 @@ func (r *menuItemRenderer) updateVisuals() {
 		r.background.Hide()
 	}
 	r.background.Refresh()
+	r.text.Text = r.i.Item.Label
 	r.text.Alignment = r.i.alignment
 	r.refreshText(r.text, false)
 	for _, text := range r.shortcutTexts {

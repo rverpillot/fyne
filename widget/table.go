@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/driver/mobile"
+	"fyne.io/fyne/v2/internal"
 	"fyne.io/fyne/v2/internal/async"
 	"fyne.io/fyne/v2/internal/widget"
 	"fyne.io/fyne/v2/theme"
@@ -850,7 +851,7 @@ func (t *Table) templateSize() fyne.Size {
 		if !t.ShowHeaderRow && !t.ShowHeaderColumn {
 			return template.MinSize()
 		}
-		return template.MinSize().Max(t.createHeader().MinSize())
+		return internal.MaxSizes(template.MinSize(), t.createHeader().MinSize())
 	}
 
 	fyne.LogError("Missing CreateCell callback required for Table", nil)
@@ -917,7 +918,7 @@ func (t *Table) visibleColumnWidths(colWidth float32, cols int) (visible map[int
 	visible = make(map[int]float32)
 
 	if t.content.Size().Width <= 0 {
-		return visible, offX, minCol, maxCol
+		return visible, offX, minCol, 0
 	}
 
 	padding := t.Theme().Size(theme.SizeNamePadding)
@@ -1017,7 +1018,7 @@ func (t *Table) visibleRowHeights(rowHeight float32, rows int) (visible map[int]
 	visible = make(map[int]float32)
 
 	if t.content.Size().Height <= 0 {
-		return visible, offY, minRow, maxRow
+		return visible, offY, minRow, 0
 	}
 
 	padding := t.Theme().Size(theme.SizeNamePadding)
@@ -1118,7 +1119,7 @@ func (t *tableRenderer) Layout(s fyne.Size) {
 
 func (t *tableRenderer) MinSize() fyne.Size {
 	sep := t.t.Theme().Size(theme.SizeNamePadding)
-	min := t.t.content.MinSize().Max(t.t.cellSize)
+	min := internal.MaxSizes(t.t.content.MinSize(), t.t.cellSize)
 	if t.t.ShowHeaderRow {
 		min.Height += t.t.headerSize.Height + sep
 	}
@@ -1471,6 +1472,9 @@ func (r *tableCellsRenderer) updateCells(toDraw TableCellID, visible, wasVisible
 }
 
 func (r *tableCellsRenderer) moveIndicators() {
+	if s := r.cells.t.content.Size(); s.Width <= 0 || s.Height <= 0 {
+		return // nothing is visible until the table has a size
+	}
 	rows, cols := 0, 0
 	if f := r.cells.t.Length; f != nil {
 		rows, cols = r.cells.t.Length()

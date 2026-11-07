@@ -11,6 +11,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/internal"
 	"fyne.io/fyne/v2/lang"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/storage/repository"
@@ -695,7 +696,7 @@ func showFile(file *FileDialog) *fileDialog {
 	itemMin := d.newFileItem(storage.NewFileURI("filename.txt"), false, false).MinSize()
 	size := ui.MinSize().Add(itemMin.AddWidthHeight(itemMin.Width+pad*4, pad*2))
 
-	d.win = widget.NewModalPopUp(ui, file.parent.Canvas())
+	d.win = widget.NewModalPopUp(container.NewPadded(ui), file.parent.Canvas())
 	d.win.Resize(size)
 
 	d.setLocation(file.effectiveStartingDir())
@@ -710,6 +711,9 @@ func showFile(file *FileDialog) *fileDialog {
 //
 // Since: 2.6
 func (f *FileDialog) Dismiss() {
+	if f.dialog == nil {
+		return
+	}
 	f.dialog.dismiss.OnTapped()
 }
 
@@ -717,6 +721,9 @@ func (f *FileDialog) Dismiss() {
 //
 // Since: 2.1
 func (f *FileDialog) MinSize() fyne.Size {
+	if f.dialog == nil { // the popup is only created on Show
+		return fyne.NewSquareSize(1)
+	}
 	return f.dialog.win.MinSize()
 }
 
@@ -743,17 +750,20 @@ func (f *FileDialog) Show() {
 
 // Refresh causes this dialog to be updated
 func (f *FileDialog) Refresh() {
+	if f.dialog == nil {
+		return
+	}
 	f.dialog.win.Refresh()
 }
 
 // Resize dialog to the requested size, if there is sufficient space.
 // If the parent window is not large enough then the size will be reduced to fit.
 func (f *FileDialog) Resize(size fyne.Size) {
-	f.desiredSize = size.Max(f.MinSize())
+	f.desiredSize = internal.MaxSizes(size, f.MinSize())
 	if f.dialog == nil {
 		return
 	}
-	f.dialog.win.Resize(size.Max(f.MinSize()))
+	f.dialog.win.Resize(internal.MaxSizes(size, f.MinSize()))
 }
 
 // Hide hides the file dialog.

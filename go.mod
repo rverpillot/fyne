@@ -3,22 +3,21 @@ module fyne.io/fyne/v2
 go 1.22.0
 
 require (
-	fyne.io/systray v1.12.2
+	fyne.io/systray v1.12.3-0.20260810170012-af4e8e793ec4
 	github.com/BurntSushi/toml v1.6.0
 	github.com/FyshOS/fancyfs v0.0.1
 	github.com/anthonynsimon/bild v0.14.0
 	github.com/fogleman/gg v1.3.0
-	github.com/fredbi/uri v1.1.1
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/fyne-io/gl-js v0.2.1-0.20260315212741-029c47fd27e8
 	github.com/fyne-io/glfw-js v0.4.0
 	github.com/fyne-io/image v0.1.1
-	github.com/fyne-io/oksvg v0.2.0
+	github.com/fyne-io/oksvg v0.2.1-0.20260918172519-a9af55fa95d9
 	github.com/go-gl/gl v0.0.0-20260331235117-4566fea9a276
-	github.com/go-gl/glfw/v3.4/glfw v0.1.0-pre.1.0.20260707082822-2a407d02d01a
+	github.com/go-gl/glfw/v3.4/glfw v0.1.0-pre.2
 	github.com/go-ole/go-ole v1.3.0
 	github.com/go-text/render v0.2.1
-	github.com/go-text/typesetting v0.3.4
+	github.com/go-text/typesetting v0.3.5
 	github.com/godbus/dbus/v5 v5.2.2
 	github.com/hack-pad/go-indexeddb v0.3.2
 	github.com/jackmordaunt/icns/v2 v2.2.7

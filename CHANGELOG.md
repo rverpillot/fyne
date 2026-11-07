@@ -3,6 +3,67 @@
 This file lists the main changes with each version of the Fyne toolkit.
 More detailed release notes can be found on the [releases page](https://github.com/fyne-io/fyne/releases). 
 
+## 2.8.2 - 12 Oct 2026
+
+### Changed
+
+* Select now uses a localized default placeholder
+* Window size is capped to the maximum the graphics driver can draw
+* Android requests persistent read permission for user-selected files and folders
+* The mobile simulator on X11 now supports keyboard input
+
+### Fixed
+
+* Editing text in an entry on android causes the press-and-hold behavior of backspace to stop working (#5467)
+* Label with very long text crashes on Wayland (#5950)
+* Raster that was created with NewRasterFromImage renders from Bounds.Min instead of from zero (#6461)
+* Child-menu does not scroll to items that does not fit in the current window (#6479)
+* File dialog nil pointer crash on MinSize()/Resize() (#6495)
+* Selection in Label with trailing alignment is not drawn correctly (#6519)
+* Fixed iOS apps feeling slower when typing
+* Window.SetOnDropped reported a stale drop position
+* Window was blank after minimizing on Windows when FixedSize was set
+* Various SVG rendering bug fixes from updated oksvg
+* Adjacent rectangles could gap or flicker by a pixel as edges were rounded separately
+* Many performance increases in Text handling and graphics operations
+
+
+## 2.8.1 - 26 Aug 2026
+
+### Changed
+
+* File dialog content is now padded using container.NewPadded (#6451)
+* The "large FyneDo" warning is now delayed unless hints are enabled
+* Big performance boost in repainting, walking objects and building render lists (#6449, #6453, #6454)
+
+### Fixed
+
+* MenuItem.Shortcut was missing from systray menus
+* Fix file path handling for URIs on Windows, including paths without a file scheme
+* Support query, fragment and URN forms in ParseURI, with stricter host validation
+* Android: re-create the surface if the window has changed underneath us (#6408)
+* Android: fix duplicated characters when using a hardware keyboard, and add missing delete key support (#6271)
+* Android: fix typo when checking for NULL in native code (#6402)
+* Mobile: multiline Entry ignored scroll position on TouchDown (#6307)
+* Mobile: fix row selection and follow-up behaviour after double/triple tap in Entry
+* Form: rebuild the render slot when a FormItem.Widget is replaced (#1966, #6459)
+* Menu: sync menu item label text on Refresh (#6404)
+* macOS: rebuild the native menu when switching windows (#6431)
+* Fix popup menu immediately dismissing when opened over an existing overlay (#6426)
+* Only skip unfocus on mouse click when the click is over the currently focused widget (#6432)
+* RequestAlwaysOnTop had no effect when called after window creation (#6436, #6441)
+* Prevent crashes from unknown GLFW scancodes, such as the Fn key on Wayland (#6445)
+* Always check for a nil return from monitor.GetVideoMode() (#6472)
+* Fix apps with systray showing a hidden "SystrayMonitor" window on KDE Wayland (#6428)
+* Fix noisy Preferences API warnings for apps that don't use Preferences (#6429)
+* Fix inconsistent vertical positioning of mixed-font text lines (#6448)
+* Fix an issue with the emoji parser
+* Report captured images as opaque so blended output is correct in captures
+* Data binding: handle the edge case where parsing a string as a float fails
+* Fix vendoring of apps using the Wayland build by keeping GLFW include headers
+* Resolve issue where some touch screen Linux taps were missed
+
+
 ## 2.8.0 - 11 Jul 2026
 
 ### Added

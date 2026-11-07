@@ -6,12 +6,14 @@ import (
 	_ "image/png" // for the icon
 	"math"
 	"runtime"
+	"slices"
 	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
+	"fyne.io/fyne/v2/internal"
 	"fyne.io/fyne/v2/internal/app"
 	"fyne.io/fyne/v2/internal/async"
 	"fyne.io/fyne/v2/internal/build"
@@ -48,17 +50,49 @@ func (w *window) minSizeOnScreen() (int, int) {
 	return w.screenSize(w.canvas.MinSize())
 }
 
-// screenSize computes the actual output size of the given content size in screen pixels
-func (w *window) screenSize(canvasSize fyne.Size) (int, int) {
-	return scale.ToScreenCoordinate(w.canvas, canvasSize.Width), scale.ToScreenCoordinate(w.canvas, canvasSize.Height)
+// screenSize computes the actual output size of the given content size in screen pixels.
+// The result is limited to a size that the graphics driver can allocate a framebuffer for.
+func (w *window) screenSize(canvasSize fyne.Size) (width, height int) {
+	maxTexture := 0
+	if p := w.canvas.Painter(); p != nil {
+		maxTexture = p.MaxTextureSize()
+	}
+	limit := maxWindowSize(maxTexture, w.canvas.texScale)
+	width, height = scale.ToScreenCoordinate(w.canvas, canvasSize.Width), scale.ToScreenCoordinate(w.canvas, canvasSize.Height)
+	if width > limit || height > limit {
+		w.warnSizeLimit()
+	}
+	return min(width, limit), min(height, limit)
+}
+
+func (w *window) warnSizeLimit() {
+	w.sizeLimitWarning.Do(func() {
+		fyne.LogError("Window content is wider or taller than the maximum supported size and has been clamped; consider wrapping, truncation, or scrolling", nil)
+	})
+}
+
+// maxWindowSize returns the largest window dimension, in screen pixels, that can be drawn.
+// Until the GL driver reports its maximum texture size we assume a size that desktop GPUs support,
+// and X11 cannot address drawables larger than 32767 pixels.
+func maxWindowSize(maxTextureSize int, texScale float32) int {
+	const defaultMaxTextureSize, maxDrawableSize = 16384, 32767
+
+	limit := defaultMaxTextureSize
+	if maxTextureSize > 0 {
+		limit = min(maxTextureSize, maxDrawableSize)
+	}
+	if texScale > 0 {
+		return int(float32(limit) / texScale)
+	}
+	return limit
 }
 
 func (w *window) Resize(size fyne.Size) {
 	w.canvas.Resize(size)
 	// we cannot perform this until window is prepared as we don't know its scale!
-	bigEnough := size.Max(w.canvas.canvasSize(w.canvas.Content().MinSize()))
+	bigEnough := internal.MaxSizes(size, w.canvas.canvasSize(w.canvas.Content().MinSize()))
 	w.runOnMainWhenCreated(func() {
-		width, height := scale.ToScreenCoordinate(w.canvas, bigEnough.Width), scale.ToScreenCoordinate(w.canvas, bigEnough.Height)
+		width, height := w.screenSize(bigEnough)
 		if w.fixedSize || !w.visible { // fixed size ignores future `resized` and if not visible we may not get the event
 			w.shouldWidth, w.shouldHeight = width, height
 			w.width, w.height = width, height
@@ -460,6 +494,8 @@ func (w *window) mouseOut() {
 }
 
 func (w *window) processMouseClicked(button desktop.MouseButton, action action, modifiers fyne.KeyModifier) {
+	w.ensurePositionProcessed()
+
 	w.mouseDragPos = w.mousePos
 	mousePos := w.mousePos
 	mouseDragStarted := w.mouseDragStarted
@@ -497,19 +533,17 @@ func (w *window) processMouseClicked(button desktop.MouseButton, action action, 
 		w.mouseClickedHandleMouseable(mev, action, wid)
 	}
 
-	if wid, ok := co.(fyne.Focusable); !ok || wid != w.canvas.Focused() {
+	focused := w.canvas.Focused()
+	if wid, ok := co.(fyne.Focusable); !ok || wid != focused {
 		ignore := false
-		_, _, _ = w.findObjectAtPositionMatching(w.canvas, mousePos, func(object fyne.CanvasObject) bool {
-			switch object.(type) {
-			case fyne.Focusable:
-				ignore = true
-				return true
-			}
+		if focusedObj, ok := focused.(fyne.CanvasObject); ok {
+			found, _, _ := w.findObjectAtPositionMatching(w.canvas, mousePos, func(object fyne.CanvasObject) bool {
+				return object == focusedObj
+			})
+			ignore = found != nil
+		}
 
-			return false
-		})
-
-		if !ignore { // if a parent item under the mouse has focus then ignore this tap unfocus
+		if !ignore { // if the currently focused widget is under the mouse then ignore this tap unfocus
 			w.canvas.Unfocus()
 		}
 	}
@@ -549,8 +583,9 @@ func (w *window) processMouseClicked(button desktop.MouseButton, action action, 
 				prevOverlay := w.canvas.Overlays().Top()
 				secondary.TappedSecondary(ev)
 
-				// if the secondary tap dismissed an overlay, forward the event to the widget underneath
-				if prevOverlay != nil && w.canvas.Overlays().Top() != prevOverlay {
+				// if the secondary tap dismissed an overlay (rather than opening a new
+				// one on top), forward the event to the widget underneath
+				if prevOverlay != nil && !slices.Contains(w.canvas.Overlays().List(), prevOverlay) {
 					co2, pos2, _ := w.findObjectAtPositionMatching(w.canvas, mousePos, func(object fyne.CanvasObject) bool {
 						_, ok := object.(fyne.SecondaryTappable)
 						return ok
@@ -567,6 +602,13 @@ func (w *window) processMouseClicked(button desktop.MouseButton, action action, 
 	// Check for double click/tap on left mouse button
 	if action == release && button == desktop.MouseButtonPrimary && !mouseDragStarted {
 		w.mouseClickedHandleTapDoubleTap(co, ev)
+	}
+}
+
+func (w *window) ensurePositionProcessed() {
+	if !w.mousePosUpdateProcessed {
+		w.processMouseMoved(w.newMousePosX, w.newMousePosY)
+		w.mousePosUpdateProcessed = true
 	}
 }
 
@@ -767,6 +809,10 @@ func (w *window) processFocused(focus bool) {
 		}
 		curWindow = w
 		w.canvas.FocusGained()
+
+		if build.HasNativeMenu {
+			setupNativeMenu(w, w.mainmenu)
+		}
 
 		if build.IsWayland {
 			w.frame.markReady()
@@ -982,7 +1028,9 @@ func (d *gLDriver) createWindow(title string, decorate bool) fyne.Window {
 
 	d.init()
 
-	ret = &window{title: title, decorate: decorate, driver: d}
+	// A window starts with no mouse move outstanding: the zero value would read
+	// as one pending at (0,0), which the first click would then apply.
+	ret = &window{title: title, decorate: decorate, driver: d, mousePosUpdateProcessed: true}
 	ret.frame = newPresentGate(ret)
 	ret.canvas = newCanvas()
 	ret.canvas.context = ret

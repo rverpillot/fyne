@@ -107,6 +107,22 @@ func TestWindow_MinSize_Fixed(t *testing.T) {
 	assertCanvasSize(t, w, minSizePlusPadding)
 }
 
+func TestWindow_MinSize_Oversized(t *testing.T) {
+	assert.Equal(t, 16384, maxWindowSize(0, 1))
+	assert.Equal(t, 8192, maxWindowSize(8192, 1))
+	assert.Equal(t, 32767, maxWindowSize(65536, 1))
+	assert.Equal(t, 8192, maxWindowSize(16384, 2))
+
+	w := createWindow("Test")
+	r := canvas.NewRectangle(color.White)
+	r.SetMinSize(fyne.NewSize(100_000, 100))
+	w.SetContent(r)
+
+	width, height := w.minSizeOnScreen()
+	assert.LessOrEqual(t, width, 32767)
+	assert.Less(t, height, 1000)
+}
+
 func TestWindow_ToggleMainMenuByKeyboard(t *testing.T) {
 	w := createWindow("Test")
 	c := w.Canvas()
@@ -1195,6 +1211,45 @@ func TestWindow_Tapped(t *testing.T) {
 	})
 }
 
+func TestWindow_TouchScreenTappedWithMouseMovePending(t *testing.T) {
+	w := createWindow("Test")
+	left := &tappableObject{Rectangle: canvas.NewRectangle(color.White)}
+	right := &tappableObject{Rectangle: canvas.NewRectangle(color.White)}
+	w.SetContent(container.NewGridWithColumns(2, left, right))
+	w.Resize(fyne.NewSize(200, 100))
+
+	runOnMain(func() {
+		w.moveMouse(20, 50) // the pointer comes to rest over the left object
+
+		w.mouseMoved(w.viewport, 150, 50)
+		w.mouseClicked(w.viewport, glfw.MouseButton1, glfw.Press, 0)
+		w.mouseClicked(w.viewport, glfw.MouseButton1, glfw.Release, 0)
+
+		assert.Nil(t, left.popTapEvent(), "the tap did not land where the pointer had been")
+		assert.NotNil(t, right.popTapEvent(), "the object under the tap was tapped")
+	})
+}
+
+func TestWindow_DroppedWithMouseMovePending(t *testing.T) {
+	w := createWindow("Test")
+	w.Resize(fyne.NewSize(200, 100))
+
+	runOnMain(func() {
+		var droppedAt fyne.Position
+		w.SetOnDropped(func(pos fyne.Position, _ []fyne.URI) {
+			droppedAt = pos
+		})
+		w.moveMouse(20, 50)
+
+		// On macOS and Windows, GLFW reports the drop point just before the drop callback
+		w.mouseMoved(w.viewport, 150, 50)
+		dropped := w.viewport.SetDropCallback(nil)
+		dropped(w.viewport, []string{"file.txt"})
+
+		assert.Equal(t, fyne.NewPos(150, 50), droppedAt)
+	})
+}
+
 func TestWindow_TappedSecondary(t *testing.T) {
 	w := createWindow("Test")
 	prop := canvas.NewRectangle(color.White)
@@ -1237,6 +1292,35 @@ func TestWindow_TappedSecondary_RedispatchAfterOverlayDismiss(t *testing.T) {
 		assert.Nil(t, w.canvas.Overlays().Top(), "overlay should be dismissed")
 		assert.Nil(t, o.popTapEvent(), "no primary tap")
 		assert.NotNil(t, o.popSecondaryTapEvent(), "secondary tap should reach widget underneath")
+	})
+}
+
+func TestWindow_TappedSecondary_OpenMenuInsideExistingOverlay(t *testing.T) {
+	w := createWindow("Test")
+	inner := &tappableObject{Rectangle: canvas.NewRectangle(color.White)}
+	inner.SetMinSize(fyne.NewSize(100, 100))
+
+	pop := widget.NewModalPopUp(inner, w.canvas)
+	ensureCanvasSize(t, w, fyne.NewSize(200, 200))
+
+	runOnMain(func() {
+		pop.Show()
+
+		menu := fyne.NewMenu("", fyne.NewMenuItem("A", nil))
+		inner.secondaryTapAction = func(e *fyne.PointEvent) {
+			widget.ShowPopUpMenuAtPosition(menu, w.canvas, e.AbsolutePosition)
+		}
+
+		before := len(w.canvas.Overlays().List())
+
+		// right-click inside the widget under the modal popup, which opens a
+		// new pop-up menu overlay on top of the existing modal overlay
+		w.mousePos = fyne.NewPos(50, 50)
+		w.mouseClicked(w.viewport, glfw.MouseButton2, glfw.Press, 0)
+		w.mouseClicked(w.viewport, glfw.MouseButton2, glfw.Release, 0)
+
+		after := len(w.canvas.Overlays().List())
+		assert.Equal(t, before+1, after, "the newly opened menu overlay should not be immediately dismissed")
 	})
 }
 
@@ -1593,6 +1677,56 @@ func TestWindow_Focus(t *testing.T) {
 
 	assert.Equal(t, "abcd", e1.Text)
 	assert.Equal(t, "ef", e2.Text)
+}
+
+func TestWindow_CollectionEmptyAreaUnfocus(t *testing.T) {
+	// List, GridWrap, Table and Tree are all Focusable themselves (for keyboard
+	// navigation), but that should not stop a tap on an empty area (with no
+	// row/cell/node under the cursor) from unfocusing another currently
+	// focused widget - see https://github.com/fyne-io/fyne/issues/4770.
+	newWidgets := map[string]func() fyne.CanvasObject{
+		"List": func() fyne.CanvasObject {
+			return widget.NewList(func() int { return 1 },
+				func() fyne.CanvasObject { return widget.NewLabel("Item") },
+				func(widget.ListItemID, fyne.CanvasObject) {})
+		},
+		"GridWrap": func() fyne.CanvasObject {
+			return widget.NewGridWrap(func() int { return 1 },
+				func() fyne.CanvasObject { return widget.NewLabel("Item") },
+				func(widget.GridWrapItemID, fyne.CanvasObject) {})
+		},
+		"Table": func() fyne.CanvasObject {
+			return widget.NewTable(func() (int, int) { return 1, 1 },
+				func() fyne.CanvasObject { return widget.NewLabel("Item") },
+				func(widget.TableCellID, fyne.CanvasObject) {})
+		},
+		"Tree": func() fyne.CanvasObject {
+			return widget.NewTreeWithStrings(map[string][]string{"": {"leaf1"}})
+		},
+	}
+
+	for name, newWidget := range newWidgets {
+		t.Run(name, func(t *testing.T) {
+			w := createWindow("Test")
+			entry := widget.NewEntry()
+			coll := newWidget()
+
+			w.SetContent(container.NewBorder(entry, nil, nil, nil, coll))
+			w.Resize(fyne.NewSize(200, 200))
+			repaintWindow(w)
+
+			w.Canvas().Focus(entry)
+			require.Equal(t, entry, w.Canvas().Focused())
+
+			runOnMain(func() {
+				w.moveMouse(20, 150) // well below the single row/cell/node, but still within the widget
+				w.mouseClicked(w.viewport, glfw.MouseButton1, glfw.Press, 0)
+				w.mouseClicked(w.viewport, glfw.MouseButton1, glfw.Release, 0)
+			})
+
+			assert.Nil(t, w.Canvas().Focused())
+		})
+	}
 }
 
 func TestWindow_CaptureTypedShortcut(t *testing.T) {
@@ -2092,6 +2226,7 @@ var _ fyne.Tappable = (*tappable)(nil)
 type tappable struct {
 	tapEvents          []any
 	secondaryTapEvents []any
+	secondaryTapAction func(*fyne.PointEvent)
 }
 
 func (t *tappable) Tapped(e *fyne.PointEvent) {
@@ -2100,6 +2235,9 @@ func (t *tappable) Tapped(e *fyne.PointEvent) {
 
 func (t *tappable) TappedSecondary(e *fyne.PointEvent) {
 	t.secondaryTapEvents = append(t.secondaryTapEvents, e)
+	if t.secondaryTapAction != nil {
+		t.secondaryTapAction(e)
+	}
 }
 
 func (t *tappable) popTapEvent() (e any) {
